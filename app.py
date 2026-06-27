@@ -4,7 +4,6 @@ import os
 
 st.set_page_config(page_title="Cocktail Party", page_icon="🍹", layout="wide")
 
-# DIZAJN: ČISTA BIJELA POZADINA I JASAN CRNI TEKST
 st.markdown("""
 <style>
     .stApp { background-color: #ffffff !important; color: #1a202c !important; }
@@ -16,11 +15,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# POPRAVAK PAMĆENJA: Globalna baza na internetu za korisnike i narudžbe
-if not hasattr(st, '_shared_party_db'):
-    st._shared_party_db = {"orders": [], "users": {"ADMIN": "0000"}}
+if not hasattr(st, '_party_global_db'):
+    st._party_global_db = {"orders": [], "users": {"ADMIN": "0000"}}
 
-db = st._party_global_db if hasattr(st, '_party_global_db') else st._shared_party_db
+shared_data = st._party_global_db
 
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'user' not in st.session_state: st.session_state.user = None
@@ -28,50 +26,45 @@ if 'auth_mode' not in st.session_state: st.session_state.auth_mode = "Sign In"
 if 'm_c' not in st.session_state: st.session_state.m_c = None
 if 'm_i' not in st.session_state: st.session_state.m_i = None
 
-# Čitanje Excel tablice
+# 👑 POPRAVAK: Prisilno i pametno njuškanje separatora u bazi podataka
 csv_name = 'cocktails_za_claudea.csv'
-df = pd.read_csv(csv_name, sep=';') if os.path.exists(csv_name) else None
+df = None
+if os.path.exists(csv_name):
+    try:
+        df = pd.read_csv(csv_name, sep=None, engine='python', encoding='utf-8')
+    except:
+        try:
+            df = pd.read_csv(csv_name, sep=';')
+        except:
+            df = pd.read_csv(csv_name, sep=',')
+
 if df is not None:
     df.columns = [c.strip().title() for c in df.columns]
     for c in df.columns:
         if 'ing' in c.lower() or 'sas' in c.lower(): df.rename(columns={c: 'Ingredients'}, inplace=True)
         if 'nam' in c.lower() or 'naz' in c.lower() or 'ime' in c.lower(): df.rename(columns={c: 'Cocktail Name'}, inplace=True)
 
-# ODVOJENI LOGIN I REGISTRACIJA
 if not st.session_state.logged_in:
     if st.session_state.auth_mode == "Sign In":
         st.title("🔑 Sign In to the Party")
         u_in = st.text_input("Username:").strip()
         p_in = st.text_input("4-digit PIN:", type="password", max_chars=4)
         if st.button("Login 🚀") and u_in and len(p_in) == 4:
-            if u_in in db["users"] and db["users"][u_in] == p_in:
-                st.session_state.logged_in = True
-                st.session_state.user = u_in
-                st.rerun()
+            if u_in in shared_data["users"] and shared_data["users"][u_in] == p_in:
+                st.session_state.logged_in = True; st.session_state.user = u_in; st.rerun()
             else: st.error("❌ Incorrect Username or PIN!")
-        if st.button("New here? Register Account ✨"):
-            st.session_state.auth_mode = "Register"
-            st.rerun()
+        if st.button("New here? Register Account ✨"): st.session_state.auth_mode = "Register"; st.rerun()
     else:
         st.title("📝 Register for the Party")
         u_reg = st.text_input("Choose Username:").strip()
         p_reg = st.text_input("Create 4-digit PIN:", type="password", max_chars=4)
         if st.button("Create Account & Enter 🚀") and u_reg and len(p_reg) == 4:
-            if u_reg.upper() == "ADMIN": st.error("❌ Cannot register as ADMIN!")
-            elif u_reg in db["users"]: st.error("❌ Username already taken!")
-            else:
-                db["users"][u_reg] = p_reg
-                st.session_state.logged_in = True
-                st.session_state.user = u_reg
-                st.rerun()
-        if st.button("Already have an account? Sign In 🔑"):
-            st.session_state.auth_mode = "Sign In"
-            st.rerun()
+            if u_reg in shared_data["users"]: st.error("❌ Username already taken!")
+            else: shared_data["users"][u_reg] = p_reg; st.session_state.logged_in = True; st.session_state.user = u_reg; st.rerun()
+        if st.button("Already have an account? Sign In 🔑"): st.session_state.auth_mode = "Sign In"; st.rerun()
 
 else:
     user = st.session_state.user
-
-    # POPRAVLJEN I VIDLJIV LOGOUT GUMB NA BOČNOJ TRACI ZA SVE KORISNIKE
     if st.sidebar.button("Logout 🚪"):
         st.session_state.logged_in = False
         st.session_state.user = None
@@ -79,48 +72,33 @@ else:
         st.session_state.m_i = None
         st.rerun()
 
-    # --- EKRAN A: MASTER BARTENDER (ADMIN pogled na šank) ---
     if user.upper() == "ADMIN":
         st.title("👑 Master Bartender Dashboard")
-        st.sidebar.write(f"Logged in as: **{user}**")
-
-        # Čitamo narudžbe iz zajedničkog rječnika koji spaja sve prozore uživo
-        active = [o for o in db["orders"] if o['status'] == "In preparation"]
+        active = [o for o in shared_data["orders"] if o['status'] == "In preparation"]
         st.subheader(f"Active Orders Queue ({len(active)})")
-        if not active: 
-            st.info("No active orders right now. Relax and have a drink! 🥂")
+        if not active: st.info("No active orders right now. Relax! 🥂")
         for idx, o in enumerate(active):
             st.write(f"👤 **{o['guest']}** ordered **{o['name']}** ({o['strength']})")
             st.caption(f"Ingredients: {o['ingredients']}")
-            if st.button(f"Serve {o['guest']}", key=f"srv_{idx}"):
-                o['status'] = "Served"
-                st.rerun()
+            if st.button(f"Serve {o['guest']}", key=f"srv_{idx}"): o['status'] = "Served"; st.rerun()
             st.markdown("---")
-
-        st.subheader("📊 Cocktail Leaderboard & Ratings")
-        served = [o for o in db["orders"] if o['status'] == "Served" and o['rating'] is not None]
+        st.subheader("📊 Leaderboard")
+        served = [o for o in shared_data["orders"] if o['status'] == "Served" and o['rating'] is not None]
         if served:
             rdf = pd.DataFrame(served)
-            ld = rdf.groupby('name')['rating'].mean().reset_index().rename(columns={'name': 'Cocktail', 'rating': 'Rating (1-10)'})
-            st.dataframe(ld.sort_values(by='Rating (1-10)', ascending=False))
-        else: 
-            st.write("No ratings submitted yet.")
-
-    # --- EKRAN B: KORISNIČKO SUČELJE ZA GOSTE (Naručivanje) ---
+            ld = rdf.groupby('name')['rating'].mean().reset_index().rename(columns={'name': 'Cocktail', 'rating': 'Rating'})
+            st.dataframe(ld.sort_values(by='Rating', ascending=False))
     else:
-        served_unnotified = [o for o in db["orders"] if o['guest'] == user and o['status'] == "Served" and not o.get('notified', False)]
-        if served_unnotified:
+        notif = [o for o in shared_data["orders"] if o['guest'] == user and o['status'] == "Served" and not o.get('notified', False)]
+        if notif: 
             st.markdown('<div class="notification">🔔 Your cocktail is ready! Come and get it! 🍹</div>', unsafe_allow_html=True)
-            for o in served_unnotified: o['notified'] = True
+            for o in notif: o['notified'] = True
 
         st.title(f"🍹 Welcome, {user}!")
-        if df is None: 
-            st.error("Missing cocktails_za_claudea.csv file on GitHub!")
+        if df is None: st.error("Missing cocktails_za_claudea.csv file on GitHub!")
         else:
             st.subheader("Mix Your Ingredients")
-            if 'chk_state' not in st.session_state:
-                st.session_state.chk_state = {i: False for i in ["Gin", "Vodka", "Rum", "Orange Juice", "Cranberry Juice", "Blueberry Juice", "Pineapple Juice", "Grenadine", "Blue Curacao", "Coca-Cola", "Jamnica", "Lemonade"]}
-
+            if 'chk_state' not in st.session_state: st.session_state.chk_state = {i: False for i in ["Gin", "Vodka", "Rum", "Orange Juice", "Cranberry Juice", "Blueberry Juice", "Pineapple Juice", "Grenadine", "Blue Curacao", "Coca-Cola", "Jamnica", "Lemonade"]}
             c1, c2, c3, c4, c5 = st.columns(5)
             cur_alk = sum([st.session_state.chk_state[x] for x in ["Gin", "Vodka", "Rum"]])
             cur_juc = sum([st.session_state.chk_state[x] for x in ["Orange Juice", "Cranberry Juice", "Blueberry Juice", "Pineapple Juice"]])
@@ -157,12 +135,15 @@ else:
                 st.session_state.m_c = "Custom Tranquillo Mix"
                 st.session_state.m_i = ", ".join(odb)
                 if df is not None:
-                    set_gosta = set(odb)
+                    # Radimo strogo čišćenje i pretvaramo odabir gosta u male komadiće teksta
+                    set_gosta = {i.strip().lower() for i in odb}
                     for _, r in df.iterrows():
-                        # POPRAVAK: Razbijamo sastojke iz Excela bez obzira na razmake i pluseve
+                        # Čistimo cijelu bazu od plusova, zareza i razmaka i pretvaramo u male tekstove
                         raw_ingredients = str(r['Ingredients']).replace(' + ', ',').replace('+', ',')
-                        b_l = [i.strip() for i in raw_ingredients.split(',')]
-                        if set(b_l) == set_gosta:
+                        b_l = {i.strip().lower() for i in raw_ingredients.split(',') if i.strip()}
+
+                        # Ako se skupovi savršeno poklapaju u slovo, povuci službeno ime!
+                        if b_l == set_gosta:
                             st.session_state.m_c = r['Cocktail Name']
                             break
             if st.session_state.m_c:
@@ -170,7 +151,7 @@ else:
                 st.write(f"Ingredients selected: {st.session_state.m_i}")
                 jac = st.radio("Strength:", ["Light", "Strong"], horizontal=True)
                 if st.button("Order Cocktail 🚀"):
-                    db["orders"].append({
+                    shared_data["orders"].append({
                         'guest': user, 'name': st.session_state.m_c, 
                         'ingredients': st.session_state.m_i, 'strength': jac, 
                         'status': "In preparation", 'rating': None, 'notified': False
@@ -182,7 +163,7 @@ else:
 
         st.markdown("---")
         st.subheader("📋 Your Cocktail History & Ratings")
-        u_orders = [o for o in db["orders"] if o['guest'] == user]
+        u_orders = [o for o in shared_data["orders"] if o['guest'] == user]
         if not u_orders: st.write("No orders yet tonight. Start mixing! 🍸")
         for idx, o in enumerate(u_orders):
             col_i, col_r = st.columns(2)
