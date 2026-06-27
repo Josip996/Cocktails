@@ -10,7 +10,8 @@ st.markdown("""
     h1, h2, h3 { color: #d69e2e !important; font-family: sans-serif; font-weight: 700; }
     .stButton>button { background-color: #e53e3e; color: white; border-radius: 8px; font-weight: 600; width: 100%; border: none; padding: 12px; }
     .stButton>button:hover { background-color: #c53030; }
-    .notification { background-color: #c6f6d5; border-left: 5px solid #38a169; padding: 15px; border-radius: 8px; color: #22543d; font-weight: bold; margin-bottom: 15px; }
+    .notification { position: fixed; top: 10px; left: 5%; right: 5%; z-index: 999999; background-color: #c6f6d5; border: 2px solid #38a169; border-left: 8px solid #38a169; padding: 15px; border-radius: 8px; color: #22543d; font-weight: bold; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); text-align: center; }
+
     p, label, .stCheckbox, span { color: #1a202c !important; font-size: 16px; font-weight: 600; }
 </style>
 """, unsafe_allow_html=True)
