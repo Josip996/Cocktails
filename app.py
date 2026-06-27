@@ -15,10 +15,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-if not hasattr(st, '_party_global_db'):
-    st._party_global_db = {"orders": [], "users": {"ADMIN": "0000"}}
+@st.cache_resource
+def get_shared_party_db():
+    return {"orders": [], "users": {"ADMIN": "0000"}}
 
-shared_data = st._party_global_db
+shared_data = get_shared_party_db()
+
 
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'user' not in st.session_state: st.session_state.user = None
