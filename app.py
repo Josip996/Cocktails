@@ -179,9 +179,15 @@ else:
                         if st.button("Submit Rate", key=f"btn_{idx}"): o['rating'] = ocj; st.rerun()
                     else: st.write(f"⭐ Rating: **{o['rating']}/10**")
             st.markdown("---")
-# Službeno Streamlit osvježavanje šanka bez izbacivanja iz profila
+import time
+
+# Potpuno automatsko osvježavanje šanka bez izbacivanja i bez klikanja gumba
 if st.session_state.get('logged_in') and st.session_state.get('user', '').upper() == "ADMIN":
-    if st.button("🔄 Refresh Orders"):
+    @st.fragment
+    def auto_refresh_dashboard():
+        time.sleep(5)
         st.rerun()
+    auto_refresh_dashboard()
+
 
 
