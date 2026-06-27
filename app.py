@@ -181,13 +181,14 @@ else:
             st.markdown("---")
 import time
 
-# Potpuno automatsko osvježavanje šanka bez izbacivanja i bez klikanja gumba
-if st.session_state.get('logged_in') and st.session_state.get('user', '').upper() == "ADMIN":
+# AUTOMATSKO OSVJEŽAVANJE: Osvježava Admin šank i obavijest za goste svakih 5 sekundi
+if st.session_state.get('logged_in'):
     @st.fragment
-    def auto_refresh_dashboard():
+    def auto_refresh_party():
         time.sleep(5)
         st.rerun()
-    auto_refresh_dashboard()
+    auto_refresh_party()
+
 
 
 
