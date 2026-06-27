@@ -4,10 +4,10 @@ import os
 
 st.set_page_config(page_title="Cocktail Party", page_icon="🍹", layout="wide")
 
-# SVIJETLO-SIVA KLUPSKA POZADINA S ODLIČNIM KONTRASTOM
+# POTPUNO NOVI DIZAJN: PUNO SVJETLIJA KLUPSKA SIVA POZADINA S ODLIČNIM KONTRASTOM
 st.markdown("""
 <style>
-    .stApp { background-color: #2d3748; color: #ffffff; }
+    .stApp { background-color: #3a4750 !important; color: #ffffff !important; }
     h1, h2, h3 { color: #ffcc00 !important; font-family: 'Segoe UI', sans-serif; }
     .stButton>button { 
         background-color: #ff6b6b; color: white; border-radius: 8px; 
@@ -32,7 +32,20 @@ if 'selected_ingredients' not in st.session_state: st.session_state.selected_ing
 csv_name = 'cocktails_za_claudea.csv'
 df_cocktails = pd.read_csv(csv_name, sep=';') if os.path.exists(csv_name) else None
 
-# STROGA LOGIN / REGISTRACIJA BARIJERA
+# Automatsko popravljanje i preimenovanje stupaca ako imaju krive nazive u Excelu
+if df_cocktails is not None:
+    df_cocktails.columns = [c.strip().title() for c in df_cocktails.columns]
+    if 'Ingredients' not in df_cocktails.columns:
+        # Ako se stupac zove 'Sastojci' ili 'Ingredients ' s razmakom, preimenuj ga prisilno
+        for col in df_cocktails.columns:
+            if 'ing' in col.lower() or 'sas' in col.lower():
+                df_cocktails.rename(columns={col: 'Ingredients'}, inplace=True)
+    if 'Cocktail Name' not in df_cocktails.columns:
+        for col in df_cocktails.columns:
+            if 'nam' in col.lower() or 'naz' in col.lower() or 'ime' in col.lower():
+                df_cocktails.rename(columns={col: 'Cocktail Name'}, inplace=True)
+
+# PRIJAVA I REGISTRACIJA
 if not st.session_state.logged_in:
     st.title("🍹 Welcome to the Cocktail Party!")
     st.subheader("Please Sign In or Register with your Name and a 4-digit PIN")
@@ -158,11 +171,15 @@ else:
                     st.session_state.selected_ingredients = " + ".join(sorted(odabrano))
                     st.session_state.matched_cocktail = "Custom Tranquillo Mix"
 
-                    for idx, row in df_cocktails.iterrows():
-                        row_ing = " + ".join(sorted([i.strip() for i in str(row['Ingredients']).split('+')]))
-                        if row_ing == st.session_state.selected_ingredients:
-                            st.session_state.matched_cocktail = row['Cocktail Name']
-                            break
+                    if df_cocktails is not None:
+                        for idx, row in df_cocktails.iterrows():
+                            # Fleksibilno čišćenje i pretraživanje redaka iz baze bez obzira na razmake u Excelu
+                            row_ing_list = [i.strip() for i in str(row['Ingredients']).replace('+', ',').split(',')]
+                            row_ing_clean = " + ".join(sorted(row_ing_list))
+
+                            if row_ing_clean == st.session_state.selected_ingredients:
+                                st.session_state.matched_cocktail = row['Cocktail Name']
+                                break
 
             if st.session_state.matched_cocktail:
                 st.success(f"🔮 Created: **{st.session_state.matched_cocktail}**")
@@ -201,3 +218,5 @@ else:
                         else: 
                             st.write(f"⭐ Rating: **{o['rating']}/10**")
                 st.markdown("---")
+
+     
