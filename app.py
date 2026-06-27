@@ -4,7 +4,6 @@ import os
 
 st.set_page_config(page_title="Cocktail Party", page_icon="🍹", layout="wide")
 
-# BIJELA POZADINA S ODLIČNIM KONTRASTOM CRNOG TEKSTA
 st.markdown("""
 <style>
     .stApp { background-color: #ffffff !important; color: #1a202c !important; }
@@ -16,12 +15,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 👑 POPRAVAK 1: Zajednička memorija koja spaja korisnički i ADMIN prozor
-@st.cache_resource
-def get_shared_party_data():
-    return {"orders": [], "users": {"ADMIN": "0000"}}
+# 👑 GLOBALNI FIX: Prisilno spajanje memorije svih uređaja na internetu preko sistemskog modula
+if not hasattr(st, '_party_global_db'):
+    st._party_global_db = {"orders": [], "users": {"ADMIN": "0000"}}
 
-shared_data = get_shared_party_data()
+shared_data = st._party_global_db
 
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'user' not in st.session_state: st.session_state.user = None
@@ -29,25 +27,14 @@ if 'auth_mode' not in st.session_state: st.session_state.auth_mode = "Sign In"
 if 'm_c' not in st.session_state: st.session_state.m_c = None
 if 'm_i' not in st.session_state: st.session_state.m_i = None
 
-# POPRAVAK 2: Otporno čitanje baze na internetu
 csv_name = 'cocktails_za_claudea.csv'
-df = None
-if os.path.exists(csv_name):
-    try:
-        # Prvo pokušavamo s točka-zarezom
-        df = pd.read_csv(csv_name, sep=';')
-        if len(df.columns) < 2:
-            df = pd.read_csv(csv_name, sep=',')
-    except:
-        df = pd.read_csv(csv_name, sep=',')
-
+df = pd.read_csv(csv_name, sep=';') if os.path.exists(csv_name) else None
 if df is not None:
     df.columns = [c.strip().title() for c in df.columns]
     for c in df.columns:
         if 'ing' in c.lower() or 'sas' in c.lower(): df.rename(columns={c: 'Ingredients'}, inplace=True)
         if 'nam' in c.lower() or 'naz' in c.lower() or 'ime' in c.lower(): df.rename(columns={c: 'Cocktail Name'}, inplace=True)
 
-# ODVOJENA PRIJAVA I REGISTRACIJA
 if not st.session_state.logged_in:
     if st.session_state.auth_mode == "Sign In":
         st.title("🔑 Sign In to the Party")
@@ -73,7 +60,6 @@ else:
         st.title("👑 Master Bartender Dashboard")
         if st.sidebar.button("Logout 🚪"): st.session_state.logged_in = False; st.rerun()
 
-        # Čitamo narudžbe iz zajedničke baze koja spaja sve prozore
         active = [o for o in shared_data["orders"] if o['status'] == "In preparation"]
         st.subheader(f"Active Orders Queue ({len(active)})")
         if not active: st.info("No active orders right now. Relax and have a drink! 🥂")
@@ -140,7 +126,6 @@ else:
                 if df is not None:
                     set_gosta = set(odb)
                     for _, r in df.iterrows():
-                        # Čistimo sve pluseve i zareze te pretvaramo u matematički skup
                         b_l = [i.strip() for i in str(r['Ingredients']).replace('+', ',').split(',')]
                         if set(b_l) == set_gosta:
                             st.session_state.m_c = r['Cocktail Name']
@@ -150,7 +135,7 @@ else:
                 st.write(f"Ingredients selected: {st.session_state.m_i}")
                 jac = st.radio("Strength:", ["Light", "Strong"], horizontal=True)
                 if st.button("Order Cocktail 🚀"):
-                    # Spremamo narudžbu u zajedničku listu koju ADMIN odmah vidi
+                    # Spremamo u prisilni globalni rječnik koji ADMIN vidi odmah s bilo kojeg uređaja
                     shared_data["orders"].append({
                         'guest': user, 'name': st.session_state.m_c, 
                         'ingredients': st.session_state.m_i, 'strength': jac, 
@@ -177,4 +162,5 @@ else:
                         if st.button("Submit Rate", key=f"btn_{idx}"): o['rating'] = ocj; st.rerun()
                     else: st.write(f"⭐ Rating: **{o['rating']}/10**")
             st.markdown("---")
+
 
