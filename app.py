@@ -179,6 +179,7 @@ else:
                         if st.button("Submit Rate", key=f"btn_{idx}"): o['rating'] = ocj; st.rerun()
                     else: st.write(f"⭐ Rating: **{o['rating']}/10**")
             st.markdown("---")
-# Automatsko osvježavanje Admin šanka svakih 5 sekundi bez odjavljivanja
-if user.upper() == "ADMIN":
+# Automatsko osvježavanje Admin šanka svakih 5 sekundi bez rušenja na login ekranu
+if st.session_state.get('logged_in') and st.session_state.get('user', '').upper() == "ADMIN":
     st.components.v1.html("<script>setTimeout(function(){window.parent.location.reload();}, 5000);</script>", height=0)
+
